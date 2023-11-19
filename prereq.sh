@@ -39,8 +39,8 @@ gpgcheck=0\" > /etc/yum.repos.d/pgdg.repo"
 
     sudo yum makecache
     sudo yum repolist 
-    sudo yum install libzstd
-    sudo yum  install postgresql15
+    sudo yum install -y libzstd
+    sudo yum install -y postgresql15
     export PATH=${PATH}:/usr/pgsql-15/bin
 
 }
