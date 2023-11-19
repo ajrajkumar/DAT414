@@ -29,8 +29,20 @@ function install_postgresql()
     print_line
     echo "Installing Postgresql client"
     print_line
-    sudo amazon-linux-extras install -y postgresql14 > ${TERM} 2>&1
-    sudo yum install -y postgresql-contrib sysbench > ${TERM} 2>&1
+    #sudo amazon-linux-extras install -y postgresql14 > ${TERM} 2>&1
+    #sudo yum install -y postgresql-contrib sysbench > ${TERM} 2>&1
+    sudo sh -c "echo \"[pgdg15]
+name=PostgreSQL 15 for Redhat Linux – x86_64
+baseurl=https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-7.10-x86_64
+enabled=1
+gpgcheck=0\" > /etc/yum.repos.d/pgdg.repo"
+
+    sudo yum makecache
+    sudo yum repolist 
+    sudo yum install libzstd
+    sudo yum  install postgresql15
+    export PATH=${PATH}:/usr/pgsql-15/bin
+
 }
 
 function configure_pg()
@@ -38,14 +50,14 @@ function configure_pg()
     #AWSREGION=`aws configure get region`
 
     PGHOST=`aws rds describe-db-cluster-endpoints \
-        --db-cluster-identifier apgpg-pgtle \
+        --db-cluster-identifier apg-pgtle \
         --region $AWS_REGION \
         --query 'DBClusterEndpoints[0].Endpoint' \
         --output text`
 
-    # Retrieve credentials from Secrets Manager - Secret: apgpg-pgtle-secret
+    # Retrieve credentials from Secrets Manager - Secret: apg-pgtle-secret
     CREDS=`aws secretsmanager get-secret-value \
-        --secret-id apgpg-pgtle-secret \
+        --secret-id apg-pgtle-secret \
         --region $AWS_REGION | jq -r '.SecretString'`
 
     export PGUSER="`echo $CREDS | jq -r '.username'`"
@@ -56,6 +68,8 @@ function configure_pg()
     echo "export PGUSER=$PGUSER" >> /home/ec2-user/.bashrc
     echo "export PGPASSWORD='$PGPASSWORD'" >> /home/ec2-user/.bashrc
     echo "export PGHOST=$PGHOST" >> /home/ec2-user/.bashrc
+    echo "export PATH=\${PATH}:/usr/pgsql-15/bin" >> /home/ec2-user/.bashrc
+
 }
 
 function install_c9()
@@ -78,6 +92,7 @@ echo "Process started at `date`"
 install_packages
 
 export AWS_REGION=`curl -s http://169.254.169.254/latest/dynamic/instance-identity/document | jq .region -r`
+echo "Current region is ${AWS_REGION}"
 export AWS_ACCOUNT_ID=$(aws sts get-caller-identity --query "Account" --output text) 
  
 install_postgresql
